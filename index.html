@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OD Request Management System</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #07070d;
+    --bg-elevated: #0e0e18;
+    --card: #12121e;
+    --card-hover: #181828;
+    --border: #1c1c30;
+    --border-light: #2a2a44;
+    --fg: #e8e8f0;
+    --fg-secondary: #a0a0b8;
+    --muted: #5c5c78;
+    --accent: #f59e0b;
+    --accent-dim: rgba(245,158,11,0.12);
+    --accent-hover: #d97706;
+    --success: #10b981;
+    --success-dim: rgba(16,185,129,0.12);
+    --danger: #ef4444;
+    --danger-dim: rgba(239,68,68,0.12);
+    --info: #06b6d4;
+    --info-dim: rgba(6,182,212,0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  h1, h2, h3, h4, h5 { font-family: 'Space Grotesk', sans-serif; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
+
+  .login-bg {
+    position: fixed; inset: 0; z-index: 0; overflow: hidden;
+    background: radial-gradient(ellipse at 20% 50%, rgba(245,158,11,0.06) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(6,182,212,0.04) 0%, transparent 50%),
+                var(--bg);
+  }
+  .login-bg .orb {
+    position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.4;
+    animation: orbFloat 20s ease-in-out infinite;
+  }
+  .login-bg .orb:nth-child(1) { width: 400px; height: 400px; background: rgba(245,158,11,0.15); top: -100px; left: -100px; }
+  .login-bg .orb:nth-child(2) { width: 300px; height: 300px; background: rgba(6,182,212,0.1); bottom: -80px; right: -60px; animation-delay: -7s; animation-duration: 25s; }
+  .login-bg .orb:nth-child(3) { width: 200px; height: 200px; background: rgba(245,158,11,0.08); top: 50%; left: 60%; animation-delay: -13s; animation-duration: 18s; }
+  @keyframes orbFloat {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    25% { transform: translate(40px, -30px) scale(1.05); }
+    50% { transform: translate(-20px, 40px) scale(0.95); }
+    75% { transform: translate(30px, 20px) scale(1.02); }
+  }
+
+  .grid-overlay {
+    position: fixed; inset: 0; z-index: 1; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  .auth-card {
+    position: relative; z-index: 10;
+    background: rgba(18,18,30,0.85);
+    backdrop-filter: blur(24px);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    width: 100%; max-width: 460px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03) inset;
+    overflow: hidden;
+  }
+  .auth-card-body { padding: 44px 36px; }
+  @media (max-width: 480px) { .auth-card-body { padding: 32px 20px; } }
+
+  .auth-tab-bar {
+    display: flex; border-bottom: 1px solid var(--border);
+  }
+  .auth-tab {
+    flex: 1; padding: 16px; text-align: center;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px;
+    color: var(--muted); cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.25s ease; background: none; border-top: none; border-left: none; border-right: none;
+  }
+  .auth-tab:hover { color: var(--fg-secondary); }
+  .auth-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .input-field {
+    width: 100%; padding: 14px 16px 14px 44px;
+    background: var(--bg-elevated); border: 1px solid var(--border);
+    border-radius: 12px; color: var(--fg); font-size: 15px;
+    font-family: 'DM Sans', sans-serif; transition: all 0.25s ease; outline: none;
+  }
+  .input-field:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+  .input-field::placeholder { color: var(--muted); }
+  .input-icon {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    color: var(--muted); font-size: 16px; transition: color 0.25s;
+  }
+  .input-group:focus-within .input-icon { color: var(--accent); }
+
+  .btn-primary {
+    width: 100%; padding: 14px; border: none; border-radius: 12px;
+    background: var(--accent); color: #000; font-weight: 600; font-size: 15px;
+    font-family: 'Space Grotesk', sans-serif; cursor: pointer;
+    transition: all 0.25s ease; letter-spacing: 0.02em;
+  }
+  .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(245,158,11,0.25); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .btn-sm {
+    padding: 8px 18px; border: none; border-radius: 8px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    font-family: 'Space Grotesk', sans-serif; transition: all 0.2s ease;
+  }
+  .btn-approve { background: var(--success-dim); color: var(--success); }
+  .btn-approve:hover { background: var(--success); color: #fff; }
+  .btn-reject { background: var(--danger-dim); color: var(--danger); }
+  .btn-reject:hover { background: var(--danger); color: #fff; }
+  .btn-outline {
+    background: transparent; border: 1px solid var(--border-light);
+    color: var(--fg-secondary); padding: 8px 18px; border-radius: 8px;
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    font-family: 'Space Grotesk', sans-serif; transition: all 0.2s ease;
+  }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-outline.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+  .dashboard-layout { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 280px; min-height: 100vh; padding: 24px 16px;
+    background: var(--bg-elevated); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    position: fixed; left: 0; top: 0; bottom: 0; z-index: 40;
+    transition: transform 0.3s ease;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px; border-radius: 10px;
+    color: var(--fg-secondary); font-size: 14px; font-weight: 500;
+    cursor: pointer; transition: all 0.2s ease; border: 1px solid transparent;
+  }
+  .nav-item:hover { color: var(--fg); background: rgba(255,255,255,0.03); }
+  .nav-item.active { color: var(--accent); background: var(--accent-dim); border-color: rgba(245,158,11,0.15); }
+  .nav-item i { width: 20px; text-align: center; font-size: 15px; }
+
+  .main-content { flex: 1; margin-left: 280px; padding: 32px 40px; min-height: 100vh; }
+
+  .stat-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 24px; transition: all 0.3s ease;
+    position: relative; overflow: hidden;
+  }
+  .stat-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--accent); opacity: 0; transition: opacity 0.3s;
+  }
+  .stat-card:hover { border-color: var(--border-light); transform: translateY(-2px); }
+  .stat-card:hover::before { opacity: 1; }
+
+  .req-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 24px; transition: all 0.25s ease;
+  }
+  .req-card:hover { border-color: var(--border-light); }
+
+  .stepper { display: flex; align-items: center; gap: 0; padding: 8px 0; }
+  .step-node { display: flex; flex-direction: column; align-items: center; gap: 6px; z-index: 1; min-width: 70px; }
+  .step-circle {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; border: 2px solid var(--border);
+    background: var(--bg-elevated); color: var(--muted); transition: all 0.3s ease;
+  }
+  .step-circle.done { border-color: var(--success); background: var(--success-dim); color: var(--success); }
+  .step-circle.current { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); animation: stepPulse 2s ease-in-out infinite; }
+  .step-circle.rejected { border-color: var(--danger); background: var(--danger-dim); color: var(--danger); }
+  .step-label { font-size: 11px; color: var(--muted); font-weight: 500; text-align: center; }
+  .step-label.done { color: var(--success); }
+  .step-label.current { color: var(--accent); }
+  .step-label.rejected { color: var(--danger); }
+  .step-line { flex: 1; height: 2px; background: var(--border); min-width: 30px; position: relative; top: -10px; }
+  .step-line.done { background: var(--success); }
+  .step-line.rejected { background: var(--danger); }
+  @keyframes stepPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.3); }
+    50% { box-shadow: 0 0 0 6px rgba(245,158,11,0); }
+  }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 6px;
+    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .badge-pending { background: var(--accent-dim); color: var(--accent); }
+  .badge-approved { background: var(--success-dim); color: var(--success); }
+  .badge-rejected { background: var(--danger-dim); color: var(--danger); }
+
+  .toast-container { position: fixed; top: 24px; right: 24px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
+  .toast {
+    padding: 14px 20px; border-radius: 12px; min-width: 300px;
+    background: var(--card); border: 1px solid var(--border);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+    display: flex; align-items: center; gap: 12px;
+    animation: toastIn 0.35s ease-out; font-size: 14px;
+  }
+  .toast.removing { animation: toastOut 0.3s ease-in forwards; }
+  @keyframes toastIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  @keyframes toastOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+    animation: fadeIn 0.2s ease;
+  }
+  .modal-box {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 20px; padding: 32px; width: 100%; max-width: 540px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.6); animation: modalIn 0.3s ease;
+    max-height: 90vh; overflow-y: auto;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes modalIn { from { transform: scale(0.95) translateY(10px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+
+  .form-label { display: block; font-size: 13px; font-weight: 600; color: var(--fg-secondary); margin-bottom: 6px; letter-spacing: 0.02em; }
+  .form-input, .form-select, .form-textarea {
+    width: 100%; padding: 12px 14px;
+    background: var(--bg-elevated); border: 1px solid var(--border);
+    border-radius: 10px; color: var(--fg); font-size: 14px;
+    font-family: 'DM Sans', sans-serif; outline: none; transition: all 0.25s ease;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+  .form-textarea { resize: vertical; min-height: 80px; }
+  .form-select { cursor: pointer; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235c5c78' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center;
+  }
+  .form-select option { background: var(--card); color: var(--fg); }
+
+  /* Registration-specific: input without left icon */
+  .input-field-noicon {
+    width: 100%; padding: 14px 16px;
+    background: var(--bg-elevated); border: 1px solid var(--border);
+    border-radius: 12px; color: var(--fg); font-size: 15px;
+    font-family: 'DM Sans', sans-serif; transition: all 0.25s ease; outline: none;
+  }
+  .input-field-noicon:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+  .input-field-noicon::placeholder { color: var(--muted); }
+
+  .avatar {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px; font-family: 'Space Grotesk', sans-serif; flex-shrink: 0;
+  }
+
+  .creds-panel {
+    background: rgba(18,18,30,0.6); border: 1px solid var(--border);
+    border-radius: 12px; max-height: 0; overflow: hidden;
+    transition: max-height 0.4s ease, padding 0.3s ease, opacity 0.3s; opacity: 0;
+  }
+  .creds-panel.open { max-height: 600px; padding: 16px 20px; opacity: 1; }
+
+  .mobile-header {
+    display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 35;
+    padding: 14px 20px; background: var(--bg-elevated);
+    border-bottom: 1px solid var(--border); align-items: center; justify-content: space-between;
+  }
+  @media (max-width: 768px) {
+    .sidebar { transform: translateX(-100%); }
+    .sidebar.mobile-open { transform: translateX(0); }
+    .main-content { margin-left: 0; padding: 72px 16px 24px; }
+    .mobile-header { display: flex; }
+    .stepper { flex-wrap: wrap; gap: 8px; }
+    .step-line { display: none; }
+  }
+
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.3; }
+
+  .fade-up { animation: fadeUp 0.4s ease-out both; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Password strength bar */
+  .strength-bar { height: 4px; border-radius: 2px; background: var(--border); margin-top: 8px; overflow: hidden; }
+  .strength-fill { height: 100%; border-radius: 2px; transition: all 0.3s ease; width: 0; }
+
+  /* Field error */
+  .field-error { font-size: 12px; color: var(--danger); margin-top: 4px; display: none; }
+  .field-error.visible { display: block; }
+
+  /* Tab content transition */
+  .tab-content { display: none; }
+  .tab-content.active { display: block; animation: fadeUp 0.3s ease-out; }
+</style>
+</head>
+<body>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ===== AUTH VIEW (Login + Register) ===== -->
+<div id="authView">
+  <div class="login-bg">
+    <div class="orb"></div>
+    <div class="orb"></div>
+    <div class="orb"></div>
+  </div>
+  <div class="grid-overlay"></div>
+
+  <div style="position:relative;z-index:10;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;">
+    <div class="auth-card">
+      <!-- Tab Bar -->
+      <div class="auth-tab-bar">
+        <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">
+          <i class="fas fa-right-to-bracket" style="margin-right:6px;"></i>Sign In
+        </button>
+        <button class="auth-tab" id="tabRegister" onclick="switchAuthTab('register')">
+          <i class="fas fa-user-plus" style="margin-right:6px;"></i>Register
+        </button>
+      </div>
+
+      <!-- LOGIN TAB -->
+      <div class="tab-content active" id="loginContent">
+        <div class="auth-card-body">
+          <div style="text-align:center;margin-bottom:28px;">
+            <div style="width:52px;height:52px;border-radius:14px;background:var(--accent-dim);display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px;border:1px solid rgba(245,158,11,0.2);">
+              <i class="fas fa-file-signature" style="font-size:22px;color:var(--accent);"></i>
+            </div>
+            <h1 style="font-size:22px;font-weight:700;margin-bottom:4px;">Welcome Back</h1>
+            <p style="color:var(--muted);font-size:13px;">Sign in to your OD Request portal</p>
+          </div>
+          <form onsubmit="handleLogin(event)">
+            <div style="display:flex;flex-direction:column;gap:14px;">
+              <div class="input-group" style="position:relative;">
+                <i class="fas fa-id-badge input-icon"></i>
+                <input type="text" class="input-field" id="loginId" placeholder="User ID (e.g. STU001)" required autocomplete="off">
+              </div>
+              <div class="input-group" style="position:relative;">
+                <i class="fas fa-lock input-icon"></i>
+                <input type="password" class="input-field" id="loginPass" placeholder="Password" required>
+              </div>
+              <button type="submit" class="btn-primary" style="margin-top:4px;">
+                <i class="fas fa-arrow-right-to-bracket" style="margin-right:8px;"></i>Sign In
+              </button>
+            </div>
+          </form>
+          <div style="text-align:center;margin-top:18px;">
+            <button onclick="toggleCreds()" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">
+              <i class="fas fa-eye" style="margin-right:5px;"></i>Show Demo Credentials
+            </button>
+          </div>
+          <div class="creds-panel" id="credsPanel">
+            <p style="font-size:11px;color:var(--muted);margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">Students (password = DOB as YYYYMMDD)</p>
+            <div style="font-size:12px;color:var(--fg-secondary);line-height:1.8;" id="credStudentList"></div>
+            <p style="font-size:11px;color:var(--muted);margin:10px 0 6px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">Staff / HOD / Principal</p>
+            <div style="font-size:12px;color:var(--fg-secondary);line-height:1.8;" id="credOtherList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- REGISTER TAB -->
+      <div class="tab-content" id="registerContent">
+        <div class="auth-card-body">
+          <div style="text-align:center;margin-bottom:24px;">
+            <div style="width:52px;height:52px;border-radius:14px;background:var(--info-dim);display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px;border:1px solid rgba(6,182,212,0.2);">
+              <i class="fas fa-user-graduate" style="font-size:22px;color:var(--info);"></i>
+            </div>
+            <h1 style="font-size:22px;font-weight:700;margin-bottom:4px;">Student Registration</h1>
+            <p style="color:var(--muted);font-size:13px;">Create your account to submit OD requests</p>
+          </div>
+          <form onsubmit="handleRegister(event)" id="registerForm">
+            <div style="display:flex;flex-direction:column;gap:14px;">
+              <!-- Name -->
+              <div>
+                <label class="form-label">Full Name</label>
+                <input type="text" class="input-field-noicon" id="regName" placeholder="e.g. Arjun Kumar" required>
+                <div class="field-error" id="errName">Please enter your full name</div>
+              </div>
+
+              <!-- Department + Year row -->
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div>
+                  <label class="form-label">Department</label>
+                  <select class="form-select" id="regDept" required>
+                    <option value="">Select...</option>
+                    <option value="CSE">CSE</option>
+                    <option value="ECE">ECE</option>
+                    <option value="MECH">MECH</option>
+                    <option value="EEE">EEE</option>
+                    <option value="CIVIL">CIVIL</option>
+                    <option value="IT">IT</option>
+                    <option value="AIDS">AIDS</option>
+                    <option value="BME">BME</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="form-label">Year</label>
+                  <select class="form-select" id="regYear" required>
+                    <option value="">Select...</option>
+                    <option value="1st Year">1st Year</option>
+                    <option value="2nd Year">2nd Year</option>
+                    <option value="3rd Year">3rd Year</option>
+                    <option value="4th Year">4th Year</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Section + Roll No row -->
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div>
+                  <label class="form-label">Section</label>
+                  <select class="form-select" id="regSection" required>
+                    <option value="">Select...</option>
+                    <option value="A">A</option>
+                    <option value="B">B</option>
+                    <option value="C">C</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="form-label">Roll Number</label>
+                  <input type="text" class="input-field-noicon" id="regRoll" placeholder="e.g. 23CS001" required style="padding:12px 14px;font-size:14px;">
+                  <div class="field-error" id="errRoll">This roll number is already registered</div>
+                </div>
+              </div>
+
+              <!-- Date of Birth -->
+              <div>
+                <label class="form-label">Date of Birth</label>
+                <input type="date" class="input-field-noicon" id="regDob" required style="padding:12px 14px;font-size:14px;">
+                <div style="font-size:11px;color:var(--muted);margin-top:4px;"><i class="fas fa-info-circle" style="margin-right:4px;"></i>Your DOB in YYYYMMDD format will be your password</div>
+              </div>
+
+              <!-- Password (auto-filled from DOB) -->
+              <div>
+                <label class="form-label">Password (auto-generated from DOB)</label>
+                <div style="position:relative;">
+                  <input type="text" class="input-field-noicon" id="regPassDisplay" readonly style="padding:12px 44px 12px 14px;font-size:14px;color:var(--accent);background:var(--bg);cursor:default;">
+                  <button type="button" onclick="copyPassword()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:4px;" title="Copy password">
+                    <i class="fas fa-copy" id="copyIcon"></i>
+                  </button>
+                </div>
+                <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
+              </div>
+
+              <!-- Confirm Password -->
+              <div>
+                <label class="form-label">Confirm Password</label>
+                <input type="password" class="input-field-noicon" id="regConfirm" placeholder="Re-enter the password shown above" required style="padding:12px 14px;font-size:14px;">
+                <div class="field-error" id="errConfirm">Passwords do not match</div>
+              </div>
+
+              <!-- Submit -->
+              <button type="submit" class="btn-primary" style="margin-top:4px;">
+                <i class="fas fa-user-check" style="margin-right:8px;"></i>Create Account
+              </button>
+
+              <p style="text-align:center;font-size:12px;color:var(--muted);margin-top:4px;">
+                Staff, HOD, and Principal accounts are created by the administrator.
+              </p>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DASHBOARD VIEW ===== -->
+<div id="dashboardView" style="display:none;">
+  <div class="mobile-header">
+    <button onclick="toggleMobileSidebar()" style="background:none;border:none;color:var(--fg);font-size:20px;cursor:pointer;"><i class="fas fa-bars"></i></button>
+    <span style="font-weight:600;font-family:'Space Grotesk',sans-serif;font-size:15px;">OD System</span>
+    <div style="width:32px;"></div>
+  </div>
+  <div class="dashboard-layout">
+    <aside class="sidebar" id="sidebar">
+      <div style="margin-bottom:28px;">
+        <div style="display:flex;align-items:center;gap:10px;padding:0 8px;">
+          <div style="width:36px;height:36px;border-radius:10px;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;border:1px solid rgba(245,158,11,0.2);">
+            <i class="fas fa-file-signature" style="font-size:15px;color:var(--accent);"></i>
+          </div>
+          <div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:15px;">OD System</div>
+            <div style="font-size:11px;color:var(--muted);" id="sidebarRole"></div>
+          </div>
+        </div>
+      </div>
+      <nav id="sidebarNav" style="flex:1;display:flex;flex-direction:column;gap:4px;"></nav>
+      <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:16px;">
+        <div id="sidebarUser" style="display:flex;align-items:center;gap:12px;padding:8px;"></div>
+        <button onclick="handleLogout()" class="nav-item" style="margin-top:8px;color:var(--danger);">
+          <i class="fas fa-right-from-bracket"></i> Sign Out
+        </button>
+      </div>
+    </aside>
+    <div id="sidebarOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:39;" onclick="toggleMobileSidebar()"></div>
+    <main class="main-content" id="mainContent"></main>
+  </div>
+</div>
+
+<div id="modalOverlay" style="display:none;"></div>
+
+<script>
+// =============================================
+// SEED DATA
+// =============================================
+const SEED_USERS = [
+  { id:'STU001', name:'Arjun Kumar', role:'student', department:'CSE', password:'20030515', dob:'2003-05-15', year:'3rd Year', section:'A', roll:'23CS001' },
+  { id:'STU002', name:'Priya Sharma', role:'student', department:'ECE', password:'20030822', dob:'2003-08-22', year:'2nd Year', section:'B', roll:'23EC002' },
+  { id:'STU003', name:'Rahul Menon', role:'student', department:'MECH', password:'20030310', dob:'2003-03-10', year:'3rd Year', section:'A', roll:'23ME003' },
+  { id:'STU004', name:'Sneha Reddy', role:'student', department:'CSE', password:'20031105', dob:'2003-11-05', year:'2nd Year', section:'A', roll:'23CS004' },
+  { id:'STU005', name:'Vikram Patel', role:'student', department:'ECE', password:'20030718', dob:'2003-07-18', year:'4th Year', section:'A', roll:'22EC005' },
+  { id:'STA001', name:'Dr. Lakshmi Narayan', role:'staff', department:'CSE', password:'staff123' },
+  { id:'STA002', name:'Prof. Ramesh Kumar', role:'staff', department:'ECE', password:'staff123' },
+  { id:'STA003', name:'Dr. Anand Prasad', role:'staff', department:'MECH', password:'staff123' },
+  { id:'HOD001', name:'Dr. Kavitha Subramaniam', role:'hod', department:'CSE', password:'hod123' },
+  { id:'HOD002', name:'Dr. Suresh Babu', role:'hod', department:'ECE', password:'hod123' },
+  { id:'HOD003', name:'Dr. Mohan Raj', role:'hod', department:'MECH', password:'hod123' },
+  { id:'PRI001', name:'Dr. Rajendran', role:'principal', department:'Administration', password:'principal123' },
+];
+
+const SEED_REQUESTS = [
+  {
+    id:'REQ001', studentId:'STU001', studentName:'Arjun Kumar', department:'CSE', year:'3rd Year', section:'A',
+    purpose:'Competition', reason:'Participating in National Level Hackathon conducted by IIT Madras. Team of 4 members selected through college-level screening.',
+    fromDate:'2025-02-10', toDate:'2025-02-12', document:'Hackathon_Letter.pdf',
+    status:'pending_hod', createdAt:'2025-02-01T10:30:00',
+    approvals: {
+      staff:{ action:'approved', by:'STA001', name:'Dr. Lakshmi Narayan', at:'2025-02-01T14:00:00', remark:'Verified participation letter' },
+      hod:null, principal:null
+    }
+  },
+  {
+    id:'REQ002', studentId:'STU002', studentName:'Priya Sharma', department:'ECE', year:'2nd Year', section:'B',
+    purpose:'Workshop', reason:'Attending 2-day IEEE Workshop on VLSI Design at Anna University.',
+    fromDate:'2025-02-15', toDate:'2025-02-16', document:'IEEE_Workshop_Invite.pdf',
+    status:'pending_staff', createdAt:'2025-02-05T09:15:00',
+    approvals: { staff:null, hod:null, principal:null }
+  },
+  {
+    id:'REQ003', studentId:'STU003', studentName:'Rahul Menon', department:'MECH', year:'3rd Year', section:'A',
+    purpose:'Sports', reason:'Representing college in State Level Cricket Tournament at Coimbatore.',
+    fromDate:'2025-01-20', toDate:'2025-01-23', document:'Sports_Board_Approval.pdf',
+    status:'approved', createdAt:'2025-01-15T11:00:00',
+    approvals: {
+      staff:{ action:'approved', by:'STA003', name:'Dr. Anand Prasad', at:'2025-01-15T15:30:00', remark:'Sports quota student' },
+      hod:{ action:'approved', by:'HOD003', name:'Dr. Mohan Raj', at:'2025-01-16T10:00:00', remark:'Recommended' },
+      principal:{ action:'approved', by:'PRI001', name:'Dr. Rajendran', at:'2025-01-17T09:00:00', remark:'Approved. All the best.' }
+    }
+  },
+  {
+    id:'REQ004', studentId:'STU004', studentName:'Sneha Reddy', department:'CSE', year:'2nd Year', section:'A',
+    purpose:'Seminar', reason:'Presenting paper at National Conference on Cloud Computing.',
+    fromDate:'2025-01-28', toDate:'2025-01-28', document:'Paper_Acceptance.pdf',
+    status:'rejected', createdAt:'2025-01-20T08:45:00',
+    approvals: {
+      staff:{ action:'approved', by:'STA001', name:'Dr. Lakshmi Narayan', at:'2025-01-20T12:00:00', remark:'Paper is genuine' },
+      hod:{ action:'rejected', by:'HOD001', name:'Dr. Kavitha Subramaniam', at:'2025-01-21T11:00:00', remark:'Insufficient advance notice. Minimum 2 weeks required.' },
+      principal:null
+    }
+  },
+  {
+    id:'REQ005', studentId:'STU001', studentName:'Arjun Kumar', department:'CSE', year:'3rd Year', section:'A',
+    purpose:'Medical', reason:'Undergoing minor dental surgery. Doctor has advised 2 days rest.',
+    fromDate:'2025-02-20', toDate:'2025-02-21', document:'Medical_Certificate.pdf',
+    status:'pending_principal', createdAt:'2025-02-10T07:30:00',
+    approvals: {
+      staff:{ action:'approved', by:'STA001', name:'Dr. Lakshmi Narayan', at:'2025-02-10T09:00:00', remark:'Medical certificate verified' },
+      hod:{ action:'approved', by:'HOD001', name:'Dr. Kavitha Subramaniam', at:'2025-02-10T14:00:00', remark:'Medical emergency, approved' },
+      principal:null
+    }
+  },
+];
+
+// =============================================
+// DATA LAYER
+// =============================================
+const DB_USERS = 'od_users';
+const DB_REQUESTS = 'od_requests';
+const DB_SESSION = 'od_session';
+
+function initDB() {
+  if (!localStorage.getItem(DB_USERS)) localStorage.setItem(DB_USERS, JSON.stringify(SEED_USERS));
+  if (!localStorage.getItem(DB_REQUESTS)) localStorage.setItem(DB_REQUESTS, JSON.stringify(SEED_REQUESTS));
+}
+function getUsers() { return JSON.parse(localStorage.getItem(DB_USERS) || '[]'); }
+function getRequests() { return JSON.parse(localStorage.getItem(DB_REQUESTS) || '[]'); }
+function saveUsers(users) { localStorage.setItem(DB_USERS, JSON.stringify(users)); }
+function saveRequests(reqs) { localStorage.setItem(DB_REQUESTS, JSON.stringify(reqs)); }
+function getSession() { return JSON.parse(localStorage.getItem(DB_SESSION) || 'null'); }
+function setSession(user) { localStorage.setItem(DB_SESSION, JSON.stringify(user)); }
+function clearSession() { localStorage.removeItem(DB_SESSION); }
+
+// =============================================
+// STATE
+// =============================================
+let currentUser = null;
+let currentNav = 'dashboard';
+let currentFilter = 'all';
+
+// =============================================
+// UTILITIES
+// =============================================
+function genUserId() {
+  const users = getUsers().filter(u => u.role === 'student');
+  return 'STU' + String(users.length + 1).padStart(3, '0');
+}
+function genId() {
+  const reqs = getRequests();
+  return 'REQ' + String(reqs.length + 1).padStart(3, '0');
+}
+function formatDate(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+}
+function formatDateTime(d) {
+  if (!d) return '—';
+  const date = new Date(d);
+  return date.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }) +
+    ' ' + date.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+}
+function getInitials(name) { return name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase(); }
+function getAvatarColor(role) {
+  return { student:'var(--info)', staff:'var(--accent)', hod:'var(--success)', principal:'#a78bfa' }[role] || 'var(--muted)';
+}
+function getRoleLabel(role) {
+  return { student:'Student', staff:'Staff Advisor', hod:'Head of Department', principal:'Principal' }[role] || role;
+}
+function getStatusBadge(status) {
+  if (status === 'approved') return '<span class="badge badge-approved"><i class="fas fa-check-circle"></i> Approved</span>';
+  if (status === 'rejected') return '<span class="badge badge-rejected"><i class="fas fa-times-circle"></i> Rejected</span>';
+  if (status === 'pending_staff') return '<span class="badge badge-pending"><i class="fas fa-clock"></i> Pending at Staff</span>';
+  if (status === 'pending_hod') return '<span class="badge badge-pending"><i class="fas fa-clock"></i> Pending at HOD</span>';
+  if (status === 'pending_principal') return '<span class="badge badge-pending"><i class="fas fa-clock"></i> Pending at Principal</span>';
+  return '<span class="badge badge-pending"><i class="fas fa-clock"></i> Pending</span>';
+}
+function getPurposeIcon(p) {
+  return { Competition:'fa-trophy', Workshop:'fa-screwdriver-wrench', Seminar:'fa-chalkboard-user', Sports:'fa-futbol', Medical:'fa-stethoscope', Other:'fa-ellipsis' }[p] || 'fa-file';
+}
+
+// =============================================
+// TOAST
+// =============================================
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toastContainer');
+  const icons = { success:'fa-check-circle', error:'fa-exclamation-circle', info:'fa-info-circle', warning:'fa-exclamation-triangle' };
+  const colors = { success:'var(--success)', error:'var(--danger)', info:'var(--info)', warning:'var(--accent)' };
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.innerHTML = `<i class="fas ${icons[type]}" style="color:${colors[type]};font-size:18px;flex-shrink:0;"></i><span>${message}</span>`;
+  container.appendChild(toast);
+  setTimeout(() => { toast.classList.add('removing'); setTimeout(() => toast.remove(), 300); }, 3500);
+}
+
+// =============================================
+// MODAL
+// =============================================
+function openModal(html) {
+  const overlay = document.getElementById('modalOverlay');
+  overlay.style.display = 'block';
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `<div class="modal-box">${html}</div>`;
+  overlay.addEventListener('click', function handler(e) {
+    if (e.target === overlay) { closeModal(); overlay.removeEventListener('click', handler); }
+  });
+}
+function closeModal() { document.getElementById('modalOverlay').style.display = 'none'; }
+
+// =============================================
+// AUTH TAB SWITCHING
+// =============================================
+function switchAuthTab(tab) {
+  document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
+  document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
+  document.getElementById('loginContent').classList.toggle('active', tab === 'login');
+  document.getElementById('registerContent').classList.toggle('active', tab === 'register');
+  // Clear errors when switching
+  document.querySelectorAll('.field-error').forEach(e => e.classList.remove('visible'));
+}
+
+// =============================================
+// REGISTRATION
+// =============================================
+// Auto-generate password from DOB
+document.addEventListener('DOMContentLoaded', () => {
+  const dobInput = document.getElementById('regDob');
+  if (dobInput) {
+    dobInput.addEventListener('change', updatePasswordFromDob);
+    dobInput.addEventListener('input', updatePasswordFromDob);
+  }
+});
+
+function updatePasswordFromDob() {
+  const dob = document.getElementById('regDob').value;
+  const passDisplay = document.getElementById('regPassDisplay');
+  const strengthFill = document.getElementById('strengthFill');
+  if (dob) {
+    const pass = dob.replace(/-/g, '');
+    passDisplay.value = pass;
+    // Simple strength indicator (DOB-based is always "weak" but we show it)
+    strengthFill.style.width = '30%';
+    strengthFill.style.background = 'var(--danger)';
+  } else {
+    passDisplay.value = '';
+    strengthFill.style.width = '0';
+  }
+}
+
+function copyPassword() {
+  const pass = document.getElementById('regPassDisplay').value;
+  if (!pass) return;
+  navigator.clipboard.writeText(pass).then(() => {
+    const icon = document.getElementById('copyIcon');
+    icon.className = 'fas fa-check';
+    icon.style.color = 'var(--success)';
+    setTimeout(() => { icon.className = 'fas fa-copy'; icon.style.color = ''; }, 1500);
+  }).catch(() => {
+    // Fallback
+    document.getElementById('regPassDisplay').select();
+    document.execCommand('copy');
+    showToast('Password copied', 'info');
+  });
+}
+
+function handleRegister(e) {
+  e.preventDefault();
+  let valid = true;
+
+  // Clear errors
+  document.querySelectorAll('.field-error').forEach(el => el.classList.remove('visible'));
+
+  const name = document.getElementById('regName').value.trim();
+  const dept = document.getElementById('regDept').value;
+  const year = document.getElementById('regYear').value;
+  const section = document.getElementById('regSection').value;
+  const roll = document.getElementById('regRoll').value.trim().toUpperCase();
+  const dob = document.getElementById('regDob').value;
+  const password = dob.replace(/-/g, '');
+  const confirm = document.getElementById('regConfirm').value;
+
+  // Validate name
+  if (name.length < 2) {
+    document.getElementById('errName').classList.add('visible');
+    valid = false;
+  }
+
+  // Check roll number uniqueness
+  const users = getUsers();
+  if (users.some(u => u.roll && u.roll.toUpperCase() === roll)) {
+    document.getElementById('errRoll').classList.add('visible');
+    valid = false;
+  }
+
+  // Check password match
+  if (confirm !== password) {
+    document.getElementById('errConfirm').classList.add('visible');
+    valid = false;
+  }
+
+  if (!valid) return;
+
+  // Generate user ID
+  const id = genUserId();
+
+  const newUser = {
+    id, name, role: 'student', department: dept,
+    password, dob, year, section, roll
+  };
+
+  users.push(newUser);
+  saveUsers(users);
+
+  showToast(`Registration successful! Your ID is ${id}. You can now sign in.`, 'success');
+
+  // Switch to login tab and pre-fill ID
+  switchAuthTab('login');
+  document.getElementById('loginId').value = id;
+  document.getElementById('loginPass').value = '';
+  document.getElementById('loginPass').focus();
+
+  // Reset form
+  document.getElementById('registerForm').reset();
+  document.getElementById('regPassDisplay').value = '';
+  document.getElementById('strengthFill').style.width = '0';
+}
+
+// =============================================
+// LOGIN
+// =============================================
+function handleLogin(e) {
+  e.preventDefault();
+  const id = document.getElementById('loginId').value.trim().toUpperCase();
+  const pass = document.getElementById('loginPass').value;
+  const users = getUsers();
+  const user = users.find(u => u.id === id && u.password === pass);
+  if (!user) {
+    showToast('Invalid User ID or Password', 'error');
+    return;
+  }
+  currentUser = user;
+  setSession(user);
+  showDashboard();
+  showToast(`Welcome, ${user.name}`, 'success');
+}
+
+function handleLogout() {
+  if (refreshInterval) clearInterval(refreshInterval);
+  currentUser = null;
+  clearSession();
+  document.getElementById('authView').style.display = '';
+  document.getElementById('dashboardView').style.display = 'none';
+  document.getElementById('loginId').value = '';
+  document.getElementById('loginPass').value = '';
+  showToast('Signed out successfully', 'info');
+}
+
+function toggleCreds() { document.getElementById('credsPanel').classList.toggle('open'); }
+
+function populateCreds() {
+  const students = SEED_USERS.filter(u => u.role === 'student');
+  const others = SEED_USERS.filter(u => u.role !== 'student');
+  document.getElementById('credStudentList').innerHTML = students.map(u =>
+    `<div><code style="background:var(--bg);padding:2px 6px;border-radius:4px;color:var(--accent);">${u.id}</code> / ${u.password} — ${u.name} (${u.department})</div>`
+  ).join('');
+  document.getElementById('credOtherList').innerHTML = others.map(u =>
+    `<div><code style="background:var(--bg);padding:2px 6px;border-radius:4px;color:var(--accent);">${u.id}</code> / ${u.password} — ${u.name} (${getRoleLabel(u.role)})</div>`
+  ).join('');
+}
+
+// =============================================
+// DASHBOARD
+// =============================================
+function showDashboard() {
+  document.getElementById('authView').style.display = 'none';
+  document.getElementById('dashboardView').style.display = '';
+  document.getElementById('sidebarRole').textContent = getRoleLabel(currentUser.role);
+  document.getElementById('sidebarUser').innerHTML = `
+    <div class="avatar" style="background:${getAvatarColor(currentUser.role)}22;color:${getAvatarColor(currentUser.role)};">${getInitials(currentUser.name)}</div>
+    <div>
+      <div style="font-size:13px;font-weight:600;line-height:1.3;">${currentUser.name}</div>
+      <div style="font-size:11px;color:var(--muted);">${currentUser.department}${currentUser.roll ? ' · ' + currentUser.roll : ''}</div>
+    </div>
+  `;
+  buildSidebarNav();
+  navigateTo('dashboard');
+}
+
+function buildSidebarNav() {
+  const nav = document.getElementById('sidebarNav');
+  let items = [{ id:'dashboard', icon:'fa-th-large', label:'Dashboard' }];
+  if (currentUser.role === 'student') {
+    items.push({ id:'newrequest', icon:'fa-plus-circle', label:'New Request' });
+    items.push({ id:'myrequests', icon:'fa-list-check', label:'My Requests' });
+  } else {
+    items.push({ id:'pending', icon:'fa-hourglass-half', label:'Pending Requests' });
+    items.push({ id:'processed', icon:'fa-check-double', label:'Processed Requests' });
+  }
+  nav.innerHTML = items.map(item =>
+    `<div class="nav-item ${item.id === currentNav ? 'active' : ''}" onclick="navigateTo('${item.id}')">
+      <i class="fas ${item.icon}"></i>${item.label}
+    </div>`
+  ).join('');
+}
+
+function navigateTo(navId) {
+  currentNav = navId;
+  currentFilter = 'all';
+  buildSidebarNav();
+  renderContent();
+  document.getElementById('sidebar').classList.remove('mobile-open');
+  document.getElementById('sidebarOverlay').style.display = 'none';
+}
+
+function toggleMobileSidebar() {
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('sidebarOverlay');
+  sb.classList.toggle('mobile-open');
+  ov.style.display = sb.classList.contains('mobile-open') ? 'block' : 'none';
+}
+
+// =============================================
+// CONTENT RENDERER
+// =============================================
+function renderContent() {
+  const main = document.getElementById('mainContent');
+  switch (currentNav) {
+    case 'dashboard': main.innerHTML = currentUser.role === 'student' ? renderStudentDashboard() : renderApproverDashboard(); break;
+    case 'newrequest': main.innerHTML = renderNewRequestForm(); break;
+    case 'myrequests': main.innerHTML = renderStudentRequests(); break;
+    case 'pending': main.innerHTML = renderPendingRequests(); break;
+    case 'processed': main.innerHTML = renderProcessedRequests(); break;
+    default: main.innerHTML = renderStudentDashboard();
+  }
+}
+
+// =============================================
+// STUDENT DASHBOARD
+// =============================================
+function renderStudentDashboard() {
+  const reqs = getRequests().filter(r => r.studentId === currentUser.id);
+  const pending = reqs.filter(r => r.status.startsWith('pending'));
+  const approved = reqs.filter(r => r.status === 'approved');
+  const rejected = reqs.filter(r => r.status === 'rejected');
+
+  return `
+    <div style="margin-bottom:32px;">
+      <h2 style="font-size:28px;font-weight:700;margin-bottom:4px;">Dashboard</h2>
+      <p style="color:var(--muted);font-size:14px;">Overview of your On-Duty requests</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:36px;">
+      ${[
+        { label:'Total Requests', val:reqs.length, icon:'fa-file-alt', color:'var(--info)', dim:'var(--info-dim)', valColor:'var(--fg)' },
+        { label:'Pending', val:pending.length, icon:'fa-clock', color:'var(--accent)', dim:'var(--accent-dim)', valColor:'var(--accent)' },
+        { label:'Approved', val:approved.length, icon:'fa-check', color:'var(--success)', dim:'var(--success-dim)', valColor:'var(--success)' },
+        { label:'Rejected', val:rejected.length, icon:'fa-times', color:'var(--danger)', dim:'var(--danger-dim)', valColor:'var(--danger)' }
+      ].map((s, i) => `
+        <div class="stat-card fade-up" style="animation-delay:${i*0.05}s;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <span style="font-size:13px;color:var(--muted);font-weight:500;">${s.label}</span>
+            <div style="width:36px;height:36px;border-radius:10px;background:${s.dim};display:flex;align-items:center;justify-content:center;">
+              <i class="fas ${s.icon}" style="color:${s.color};font-size:14px;"></i>
+            </div>
+          </div>
+          <div style="font-size:32px;font-weight:700;font-family:'Space Grotesk',sans-serif;color:${s.valColor};">${s.val}</div>
+        </div>
+      `).join('')}
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <h3 style="font-size:18px;font-weight:600;">Recent Requests</h3>
+      <button class="btn-outline" onclick="navigateTo('myrequests')">View All <i class="fas fa-arrow-right" style="margin-left:6px;font-size:11px;"></i></button>
+    </div>
+    ${reqs.length === 0 ? '<div class="empty-state"><i class="fas fa-inbox"></i><p>No requests yet</p><p style="font-size:13px;margin-top:4px;">Submit your first On-Duty request</p></div>' :
+      reqs.slice(0, 3).map((r, i) => renderRequestCard(r, 'student', i)).join('')}
+    <div style="margin-top:36px;padding:24px;background:var(--card);border:1px solid var(--border);border-radius:14px;">
+      <h4 style="font-size:15px;font-weight:600;margin-bottom:12px;"><i class="fas fa-route" style="color:var(--accent);margin-right:8px;"></i>Approval Flow</h4>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--fg-secondary);">
+        <span style="padding:6px 14px;background:var(--info-dim);border-radius:8px;color:var(--info);font-weight:600;">You (Student)</span>
+        <i class="fas fa-arrow-right" style="color:var(--muted);"></i>
+        <span style="padding:6px 14px;background:var(--accent-dim);border-radius:8px;color:var(--accent);font-weight:600;">Staff Advisor</span>
+        <i class="fas fa-arrow-right" style="color:var(--muted);"></i>
+        <span style="padding:6px 14px;background:var(--success-dim);border-radius:8px;color:var(--success);font-weight:600;">HOD</span>
+        <i class="fas fa-arrow-right" style="color:var(--muted);"></i>
+        <span style="padding:6px 14px;background:rgba(167,139,250,0.12);border-radius:8px;color:#a78bfa;font-weight:600;">Principal</span>
+      </div>
+    </div>`;
+}
+
+// =============================================
+// NEW REQUEST FORM
+// =============================================
+function renderNewRequestForm() {
+  const today = new Date().toISOString().split('T')[0];
+  return `
+    <div style="margin-bottom:32px;">
+      <h2 style="font-size:28px;font-weight:700;margin-bottom:4px;">New OD Request</h2>
+      <p style="color:var(--muted);font-size:14px;">Submit an On-Duty leave request</p>
+    </div>
+    <div style="max-width:600px;">
+      <div class="req-card fade-up">
+        <form onsubmit="submitRequest(event)">
+          <div style="display:flex;flex-direction:column;gap:20px;">
+            <div>
+              <label class="form-label">Purpose</label>
+              <select class="form-select" id="reqPurpose" required>
+                <option value="">Select purpose...</option>
+                <option value="Competition">Competition</option>
+                <option value="Workshop">Workshop</option>
+                <option value="Seminar">Seminar</option>
+                <option value="Sports">Sports</option>
+                <option value="Medical">Medical</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">Reason</label>
+              <textarea class="form-textarea" id="reqReason" placeholder="Describe the reason for your On-Duty request in detail..." required></textarea>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+              <div><label class="form-label">From Date</label><input type="date" class="form-input" id="reqFrom" min="${today}" required></div>
+              <div><label class="form-label">To Date</label><input type="date" class="form-input" id="reqTo" min="${today}" required></div>
+            </div>
+            <div>
+              <label class="form-label">Supporting Document Name</label>
+              <input type="text" class="form-input" id="reqDoc" placeholder="e.g., Participation_Letter.pdf" required>
+            </div>
+            <div style="display:flex;gap:12px;margin-top:8px;">
+              <button type="submit" class="btn-primary" style="flex:1;"><i class="fas fa-paper-plane" style="margin-right:8px;"></i>Submit Request</button>
+              <button type="button" class="btn-outline" onclick="navigateTo('dashboard')" style="padding:14px 24px;">Cancel</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>`;
+}
+
+function submitRequest(e) {
+  e.preventDefault();
+  const purpose = document.getElementById('reqPurpose').value;
+  const reason = document.getElementById('reqReason').value.trim();
+  const fromDate = document.getElementById('reqFrom').value;
+  const toDate = document.getElementById('reqTo').value;
+  const document = document.getElementById('reqDoc').value.trim();
+  if (new Date(toDate) < new Date(fromDate)) { showToast('To Date cannot be before From Date', 'error'); return; }
+  const reqs = getRequests();
+  reqs.push({
+    id: genId(), studentId: currentUser.id, studentName: currentUser.name,
+    department: currentUser.department, year: currentUser.year, section: currentUser.section,
+    purpose, reason, fromDate, toDate, document,
+    status: 'pending_staff', createdAt: new Date().toISOString(),
+    approvals: { staff: null, hod: null, principal: null }
+  });
+  saveRequests(reqs);
+  showToast('Request submitted successfully! Awaiting Staff approval.', 'success');
+  navigateTo('myrequests');
+}
+
+// =============================================
+// STUDENT REQUESTS LIST
+// =============================================
+function renderStudentRequests() {
+  const reqs = getRequests().filter(r => r.studentId === currentUser.id).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  return `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+      <div>
+        <h2 style="font-size:28px;font-weight:700;margin-bottom:4px;">My Requests</h2>
+        <p style="color:var(--muted);font-size:14px;">${reqs.length} request${reqs.length !== 1 ? 's' : ''} submitted</p>
+      </div>
+      <button class="btn-primary" style="width:auto;padding:10px 20px;font-size:14px;" onclick="navigateTo('newrequest')"><i class="fas fa-plus" style="margin-right:8px;"></i>New Request</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;">
+      ${['all','pending','approved','rejected'].map(f => `<button class="btn-outline ${currentFilter===f?'active':''}" onclick="setFilter('${f}')">${f.charAt(0).toUpperCase()+f.slice(1)}</button>`).join('')}
+    </div>
+    ${renderFilteredRequests(reqs, 'student')}`;
+}
+
+function setFilter(f) { currentFilter = f; renderContent(); }
+
+function renderFilteredRequests(reqs, viewerRole) {
+  let filtered = reqs;
+  if (currentFilter === 'pending') filtered = reqs.filter(r => r.status.startsWith('pending'));
+  else if (currentFilter === 'approved') filtered = reqs.filter(r => r.status === 'approved');
+  else if (currentFilter === 'rejected') filtered = reqs.filter(r => r.status === 'rejected');
+  if (filtered.length === 0) return `<div class="empty-state"><i class="fas fa-inbox"></i><p>No ${currentFilter==='all'?'':currentFilter+' '}requests found</p></div>`;
+  return filtered.map((r, i) => renderRequestCard(r, viewerRole, i)).join('');
+}
+
+// =============================================
+// APPROVER DASHBOARD
+// =============================================
+function renderApproverDashboard() {
+  const reqs = getRelevantRequests();
+  const pending = reqs.filter(r => r.status.startsWith('pending'));
+  const approved = reqs.filter(r => r.status === 'approved');
+  const rejected = reqs.filter(r => r.status === 'rejected');
+  const pendingLabel = currentUser.role === 'staff' ? 'Pending at You' : currentUser.role === 'hod' ? 'Staff-Approved, Pending at You' : 'HOD-Approved, Pending at You';
+  return `
+    <div style="margin-bottom:32px;">
+      <h2 style="font-size:28px;font-weight:700;margin-bottom:4px;">${getRoleLabel(currentUser.role)} Dashboard</h2>
+      <p style="color:var(--muted);font-size:14px;">${currentUser.department} Department</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:36px;">
+      ${[
+        { label:'Total Received', val:reqs.length, icon:'fa-file-alt', color:'var(--info)', dim:'var(--info-dim)', valColor:'var(--fg)' },
+        { label:'Pending Action', val:pending.length, icon:'fa-hourglass-half', color:'var(--accent)', dim:'var(--accent-dim)', valColor:'var(--accent)' },
+        { label:'Approved', val:approved.length, icon:'fa-check', color:'var(--success)', dim:'var(--success-dim)', valColor:'var(--success)' },
+        { label:'Rejected', val:rejected.length, icon:'fa-times', color:'var(--danger)', dim:'var(--danger-dim)', valColor:'var(--danger)' }
+      ].map((s, i) => `
+        <div class="stat-card fade-up" style="animation-delay:${i*0.05}s;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <span style="font-size:13px;color:var(--muted);font-weight:500;">${s.label}</span>
+            <div style="width:36px;height:36px;border-radius:10px;background:${s.dim};display:flex;align-items:center;justify-content:center;">
+              <i class="fas ${s.icon}" style="color:${s.color};font-size:14px;"></i>
+            </div>
+          </div>
+          <div style="font-size:32px;font-weight:700;font-family:'Space Grotesk',sans-serif;color:${s.valColor};">${s.val}</div>
+        </div>
+      `).join('')}
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <h3 style="font-size:18px;font-weight:600;">${pendingLabel}</h3>
+      ${pending.length > 0 ? `<button class="btn-outline" onclick="navigateTo('pending')">View All <i class="fas fa-arrow-right" style="margin-left:6px;font-size:11px;"></i></button>` : ''}
+    </div>
+    ${pending.length === 0 ? '<div class="empty-state"><i class="fas fa-check-circle" style="color:var(--success);opacity:0.5;"></i><p>All caught up! No pending requests.</p></div>' :
+      pending.slice(0, 3).map((r, i) => renderRequestCard(r, 'approver', i)).join('')}`;
+}
+
+function getRelevantRequests() {
+  const reqs = getRequests();
+  if (currentUser.role === 'principal') return reqs.filter(r => r.status === 'pending_principal' || r.status === 'approved' || r.status === 'rejected');
+  const dept = reqs.filter(r => r.department === currentUser.department);
+  if (currentUser.role === 'staff') return dept.filter(r => ['pending_staff','pending_hod','pending_principal','approved','rejected'].includes(r.status));
+  if (currentUser.role === 'hod') return dept.filter(r => ['pending_hod','pending_principal','approved','rejected'].includes(r.status));
+  return dept;
+}
+
+// =============================================
+// PENDING / PROCESSED (Approver)
+// =============================================
+function renderPendingRequests() {
+  const ps = currentUser.role === 'staff' ? 'pending_staff' : currentUser.role === 'hod' ? 'pending_hod' : 'pending_principal';
+  const reqs = getRequests().filter(r => {
+    if (r.status !== ps) return false;
+    if (currentUser.role !== 'principal' && r.department !== currentUser.department) return false;
+    return true;
+  }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const label = currentUser.role === 'staff' ? 'Awaiting Your Approval' : currentUser.role === 'hod' ? 'Staff-Approved, Awaiting Your Decision' : 'HOD-Approved, Awaiting Final Decision';
+  return `
+    <div style="margin-bottom:24px;">
+      <h2 style="font-size:28px;font-weight:700;margin-bottom:4px;">Pending Requests</h2>
+      <p style="color:var(--muted);font-size:14px;">${label} — ${reqs.length} request${reqs.length!==1?'s':''}</p>
+    </div>
+    ${reqs.length === 0 ? '<div class="empty-state"><i class="fas fa-check-circle" style="color:var(--success);opacity:0.5;"></i><p>No pending requests</p></div>' :
+      reqs.map((r, i) => renderRequestCard(r, 'approver', i)).join('')}`;
+}
+
+function renderProcessedRequests() {
+  const rk = currentUser.role === 'staff' ? 'staff' : currentUser.role === 'hod' ? 'hod' : 'principal';
+  const reqs = getRequests().filter(r => {
+    if (!r.approvals[rk]) return false;
+    if (currentUser.role !== 'principal' && r.department !== currentUser.department) return false;
+    return true;
+  }).sort((a, b) => new Date(b.approvals[rk].at) - new Date(a.approvals[rk].at));
+  return `
+    <div style="margin-bottom:24px;">
+      <h2 style="font-size:28px;font-weight:700;margin-bottom:4px;">Processed Requests</h2>
+      <p style="color:var(--muted);font-size:14px;">${reqs.length} request${reqs.length!==1?'s':''} processed by you</p>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;">
+      ${['all','approved','rejected'].map(f => `<button class="btn-outline ${currentFilter===f?'active':''}" onclick="setFilter('${f}')">${f.charAt(0).toUpperCase()+f.slice(1)}</button>`).join('')}
+    </div>
+    ${renderFilteredProcessed(reqs)}`;
+}
+
+function renderFilteredProcessed(reqs) {
+  const rk = currentUser.role === 'staff' ? 'staff' : currentUser.role === 'hod' ? 'hod' : 'principal';
+  let filtered = reqs;
+  if (currentFilter === 'approved') filtered = reqs.filter(r => r.approvals[rk]?.action === 'approved');
+  else if (currentFilter === 'rejected') filtered = reqs.filter(r => r.approvals[rk]?.action === 'rejected');
+  if (filtered.length === 0) return `<div class="empty-state"><i class="fas fa-inbox"></i><p>No ${currentFilter==='all'?'':currentFilter+' '}requests found</p></div>`;
+  return filtered.map((r, i) => renderRequestCard(r, 'processed', i)).join('');
+}
+
+// =============================================
+// REQUEST CARD
+// =============================================
+function renderRequestCard(req, viewerRole, index) {
+  const days = Math.ceil((new Date(req.toDate) - new Date(req.fromDate)) / 86400000) + 1;
+  let approvalDetails = '';
+  const rk = currentUser.role === 'staff' ? 'staff' : currentUser.role === 'hod' ? 'hod' : 'principal';
+  if (viewerRole === 'processed' && req.approvals[rk]) {
+    const ap = req.approvals[rk];
+    approvalDetails = `<div style="margin-top:16px;padding:12px 16px;border-radius:10px;background:${ap.action==='approved'?'var(--success-dim)':'var(--danger-dim)'};border:1px solid ${ap.action==='approved'?'rgba(16,185,129,0.15)':'rgba(239,68,68,0.15)'};">
+      <div style="font-size:12px;font-weight:600;color:${ap.action==='approved'?'var(--success)':'var(--danger)'};margin-bottom:4px;"><i class="fas ${ap.action==='approved'?'fa-check-circle':'fa-times-circle'}" style="margin-right:6px;"></i>You ${ap.action} this request</div>
+      ${ap.remark?`<div style="font-size:12px;color:var(--fg-secondary);margin-top:4px;">"${ap.remark}"</div>`:''}
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;">${formatDateTime(ap.at)}</div>
+    </div>`;
+  }
+  let rejectionInfo = '';
+  if (req.status === 'rejected') {
+    for (const key of ['staff','hod','principal']) {
+      if (req.approvals[key]?.action === 'rejected') {
+        const ap = req.approvals[key];
+        rejectionInfo = `<div style="margin-top:16px;padding:12px 16px;border-radius:10px;background:var(--danger-dim);border:1px solid rgba(239,68,68,0.15);">
+          <div style="font-size:12px;font-weight:600;color:var(--danger);margin-bottom:4px;"><i class="fas fa-times-circle" style="margin-right:6px;"></i>Rejected by ${ap.name}</div>
+          ${ap.remark?`<div style="font-size:12px;color:var(--fg-secondary);margin-top:4px;">"${ap.remark}"</div>`:''}
+          <div style="font-size:11px;color:var(--muted);margin-top:6px;">${formatDateTime(ap.at)}</div>
+        </div>`;
+        break;
+      }
+    }
+  }
+  let actionButtons = '';
+  if (viewerRole === 'approver' && req.status.startsWith('pending')) {
+    actionButtons = `<div style="display:flex;gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+      <button class="btn-sm btn-approve" onclick="openActionModal('${req.id}','approved')"><i class="fas fa-check" style="margin-right:6px;"></i>Approve</button>
+      <button class="btn-sm btn-reject" onclick="openActionModal('${req.id}','rejected')"><i class="fas fa-times" style="margin-right:6px;"></i>Reject</button>
+    </div>`;
+  }
+  return `
+    <div class="req-card fade-up" style="margin-bottom:16px;animation-delay:${index*0.05}s;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:42px;height:42px;border-radius:10px;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;">
+            <i class="fas ${getPurposeIcon(req.purpose)}" style="color:var(--accent);font-size:16px;"></i>
+          </div>
+          <div>
+            <div style="font-weight:600;font-size:15px;font-family:'Space Grotesk',sans-serif;">${req.id}</div>
+            <div style="font-size:12px;color:var(--muted);">${req.purpose} · ${req.department} · ${req.year||''} ${req.section||''}</div>
+          </div>
+        </div>
+        ${getStatusBadge(req.status)}
+      </div>
+      ${viewerRole !== 'student' ? `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg-elevated);border-radius:10px;margin-bottom:14px;">
+        <div class="avatar" style="width:32px;height:32px;font-size:11px;border-radius:8px;background:var(--info-dim);color:var(--info);">${getInitials(req.studentName)}</div>
+        <div>
+          <div style="font-size:13px;font-weight:600;">${req.studentName}</div>
+          <div style="font-size:11px;color:var(--muted);">${req.studentId} · ${req.department}</div>
+        </div>
+      </div>` : ''}
+      <p style="font-size:14px;color:var(--fg-secondary);line-height:1.6;margin-bottom:14px;">${req.reason}</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px;">
+        <div style="padding:10px 14px;background:var(--bg-elevated);border-radius:8px;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">From</div>
+          <div style="font-size:13px;font-weight:600;">${formatDate(req.fromDate)}</div>
+        </div>
+        <div style="padding:10px 14px;background:var(--bg-elevated);border-radius:8px;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">To</div>
+          <div style="font-size:13px;font-weight:600;">${formatDate(req.toDate)}</div>
+        </div>
+        <div style="padding:10px 14px;background:var(--bg-elevated);border-radius:8px;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Duration</div>
+          <div style="font-size:13px;font-weight:600;">${days} day${days>1?'s':''}</div>
+        </div>
+        <div style="padding:10px 14px;background:var(--bg-elevated);border-radius:8px;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Document</div>
+          <div style="font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;"><i class="fas fa-paperclip" style="color:var(--muted);font-size:11px;"></i>${req.document}</div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px;"><i class="fas fa-calendar" style="margin-right:4px;"></i>Submitted: ${formatDateTime(req.createdAt)}</div>
+      ${renderStepper(req.status, req.approvals)}
+      ${['staff','hod','principal'].map(key => {
+        if (req.approvals[key]) {
+          const ap = req.approvals[key];
+          return `<div style="font-size:11px;color:var(--muted);margin-top:6px;"><i class="fas ${ap.action==='approved'?'fa-check':'fa-times'}" style="color:${ap.action==='approved'?'var(--success)':'var(--danger)'};margin-right:4px;"></i>${ap.name}: ${ap.action}${ap.remark?' — "'+ap.remark+'"':''} (${formatDateTime(ap.at)})</div>`;
+        }
+        return '';
+      }).join('')}
+      ${rejectionInfo}${approvalDetails}${actionButtons}
+    </div>`;
+}
+
+// =============================================
+// STEPPER
+// =============================================
+function renderStepper(status, approvals) {
+  const steps = [
+    { key:'submitted', label:'Submitted', icon:'fa-paper-plane' },
+    { key:'staff', label:'Staff', icon:'fa-user-tie' },
+    { key:'hod', label:'HOD', icon:'fa-building-columns' },
+    { key:'principal', label:'Principal', icon:'fa-graduation-cap' }
+  ];
+  let html = '<div class="stepper">';
+  steps.forEach((step, i) => {
+    let cls = '', lineCls = '';
+    if (status === 'rejected') {
+      if (step.key === 'submitted') cls = 'done';
+      else if (approvals[step.key]?.action === 'rejected') cls = 'rejected';
+      else if (approvals[step.key]?.action === 'approved') cls = 'done';
+    } else if (status === 'approved') { cls = 'done'; lineCls = 'done'; }
+    else {
+      if (step.key === 'submitted') { cls = 'done'; lineCls = 'done'; }
+      else if (approvals[step.key]?.action === 'approved') { cls = 'done'; lineCls = 'done'; }
+      else if (status === 'pending_' + step.key) cls = 'current';
+    }
+    html += `<div class="step-node"><div class="step-circle ${cls}"><i class="fas ${step.icon}"></i></div><div class="step-label ${cls}">${step.label}</div></div>`;
+    if (i < steps.length - 1) {
+      if (status === 'rejected') {
+        if (step.key === 'submitted') lineCls = 'done';
+        else if (approvals[step.key]?.action === 'approved') lineCls = 'done';
+        else if (approvals[step.key]?.action === 'rejected') lineCls = 'rejected';
+        const nextKey = steps[i+1].key;
+        if (approvals[nextKey]?.action === 'rejected' && (!approvals[step.key] || approvals[step.key].action === 'approved')) lineCls = 'done';
+      } else if (status === 'approved') { lineCls = 'done'; }
+      else {
+        if (step.key === 'submitted') lineCls = 'done';
+        else if (approvals[step.key]?.action === 'approved') lineCls = 'done';
+      }
+      html += `<div class="step-line ${lineCls}"></div>`;
+    }
+  });
+  html += '</div>';
+  return html;
+}
+
+// =============================================
+// ACTION MODAL
+// =============================================
+function openActionModal(reqId, action) {
+  const req = getRequests().find(r => r.id === reqId);
+  if (!req) return;
+  const isApprove = action === 'approved';
+  const nextStatus = isApprove ?
+    (req.status === 'pending_staff' ? 'pending_hod' : req.status === 'pending_hod' ? 'pending_principal' : 'approved') : 'rejected';
+  const nextLabel = isApprove ?
+    (nextStatus === 'pending_hod' ? 'Forwarded to HOD' : nextStatus === 'pending_principal' ? 'Forwarded to Principal' : 'Fully Approved') : 'Request Rejected';
+  openModal(`
+    <div style="text-align:center;margin-bottom:24px;">
+      <div style="width:56px;height:56px;border-radius:50%;background:${isApprove?'var(--success-dim)':'var(--danger-dim)'};display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;">
+        <i class="fas ${isApprove?'fa-check-circle':'fa-times-circle'}" style="font-size:24px;color:${isApprove?'var(--success)':'var(--danger)'};"></i>
+      </div>
+      <h3 style="font-size:20px;font-weight:700;">${isApprove?'Approve':'Reject'} Request</h3>
+      <p style="color:var(--muted);font-size:14px;margin-top:4px;">${req.id} — ${req.studentName}</p>
+    </div>
+    <div style="padding:14px 16px;background:var(--bg-elevated);border-radius:10px;margin-bottom:20px;font-size:13px;color:var(--fg-secondary);line-height:1.5;">${req.reason}</div>
+    <div style="padding:10px 14px;background:${isApprove?'var(--success-dim)':'var(--danger-dim)'};border-radius:8px;margin-bottom:20px;text-align:center;font-size:13px;font-weight:600;color:${isApprove?'var(--success)':'var(--danger)'};">
+      <i class="fas fa-arrow-right" style="margin-right:6px;"></i>${nextLabel}
+    </div>
+    <div style="margin-bottom:20px;">
+      <label class="form-label">Remark (optional)</label>
+      <textarea class="form-textarea" id="actionRemark" placeholder="${isApprove?'Add any comment...':'Reason for rejection...'}" rows="3"></textarea>
+    </div>
+    <div style="display:flex;gap:12px;">
+      <button class="btn-outline" onclick="closeModal()" style="flex:1;padding:12px;">Cancel</button>
+      <button class="btn-sm ${isApprove?'btn-approve':'btn-reject'}" onclick="processAction('${reqId}','${action}','${nextStatus}')" style="flex:1;padding:12px;font-size:14px;">
+        <i class="fas ${isApprove?'fa-check':'fa-times'}" style="margin-right:6px;"></i>Confirm ${isApprove?'Approval':'Rejection'}
+      </button>
+    </div>`);
+}
+
+function processAction(reqId, action, nextStatus) {
+  const reqs = getRequests();
+  const idx = reqs.findIndex(r => r.id === reqId);
+  if (idx === -1) return;
+  const remark = document.getElementById('actionRemark')?.value.trim() || '';
+  const rk = currentUser.role === 'staff' ? 'staff' : currentUser.role === 'hod' ? 'hod' : 'principal';
+  reqs[idx].approvals[rk] = { action, by: currentUser.id, name: currentUser.name, at: new Date().toISOString(), remark };
+  reqs[idx].status = nextStatus;
+  saveRequests(reqs);
+  closeModal();
+  if (action === 'approved') {
+    showToast(nextStatus === 'pending_hod' ? 'Approved and forwarded to HOD' : nextStatus === 'pending_principal' ? 'Approved and forwarded to Principal' : 'Request fully approved!', 'success');
+  } else { showToast('Request has been rejected', 'warning'); }
+  renderContent(); buildSidebarNav();
+}
+
+// =============================================
+// AUTO-REFRESH
+// =============================================
+let refreshInterval = null;
+function startAutoRefresh() {
+  refreshInterval = setInterval(() => {
+    if (currentUser && document.getElementById('dashboardView').style.display !== 'none') renderContent();
+  }, 8000);
+}
+
+// =============================================
+// INIT
+// =============================================
+function init() {
+  initDB();
+  populateCreds();
+  const session = getSession();
+  if (session) {
+    const user = getUsers().find(u => u.id === session.id);
+    if (user) { currentUser = user; showDashboard(); startAutoRefresh(); return; }
+  }
+  document.getElementById('authView').style.display = '';
+  document.getElementById('dashboardView').style.display = 'none';
+}
+
+// Patch login/logout for refresh control
+const _handleLogin = handleLogin;
+handleLogin = function(e) {
+  _handleLogin(e);
+  if (currentUser) startAutoRefresh();
+};
+const _handleLogout = handleLogout;
+handleLogout = function() {
+  if (refreshInterval) clearInterval(refreshInterval);
+  _handleLogout();
+};
+
+window.addEventListener('beforeunload', (e) => { if (currentUser) { e.preventDefault(); e.returnValue = ''; } });
+
+init();
+</script>
+</body>
+</html>
